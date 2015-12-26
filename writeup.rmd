@@ -1,0 +1,87 @@
+---
+title: "Coursera Practical Machine Learning - Final Project"
+output: html_document
+---
+  
+## Background
+
+Wearables are becoming more and more popular in the field of IoT. Devices such as Jawbone Up and Fitbit provide a cheap way to collect a large amount of personal activity data. In this project, the goal is to analyze data from accelerometers on 4 different body locations of 6 participants and predict the ways of how barbell lift is performed. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+## Data download and preparation
+
+The training data for this project are available here: https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here: https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+First, load the library and training, testing data. Treat 'NA' and '#DIV/0!' as NA variables.  
+```{r, message=FALSE}
+library(caret)
+library(randomForest)
+
+training = read.csv("data/pml-training.csv", header = TRUE, na.strings = c("NA", "#DIV/0!"), stringsAsFactors = F)
+testing = read.csv("data/pml-testing.csv", header = TRUE, na.strings = c("NA", "#DIV/0!"), stringsAsFactors = F)
+```
+
+Remove not useful columns: find the columns with too many NAs, columns with near zero variance and the first 7 columns that don't provide useful accelerometer signals. Make the new data set training.tidy.
+  
+```{r}
+NA.col = which(colMeans(is.na(training)) > 0.95)
+nzv <- nearZeroVar(training)
+
+training.tidy <- training[, -c(NA.col, nzv, 1:7)]
+```
+
+Split the training data set into two to estimate out-of-sample error.
+
+```{r}
+#Set seed for consistent result
+set.seed(118)
+
+inTrain <- createDataPartition(y=training.tidy$classe, p=0.7, list=F)
+training.tidy.1 <- training.tidy[inTrain, ]
+training.tidy.2 <- training.tidy[-inTrain, ]
+```
+
+## Modeling
+
+Use the method of random forest to construct the model. In train fuction, use 3-fold cross-validation in trainControl. And then use the model to predict the classes in training.tidy.2. After that, we can check the estimated out of sample error.
+
+```{r}
+rf.fit.1 <- train(classe ~ ., data=training.tidy.1, method="rf", trControl=trainControl(method="cv", number=3))
+rf.fit.1$finalModel
+
+pred2 <- predict(rf.fit.1, training.tidy.2)
+confusionMatrix(training.tidy.2$classe, pred2)
+```
+
+The accuracy is about 99.42% on the second training set, so the out of sample error is about 0.58%.
+
+## Prediction on testing data set
+
+The testing data set is processed the exact way I have done to the training set. The model is re-trained using the whole training data (Note the previous model I used for error estimation is only trained using 70% of the training data). The prediction on testing.tidy is then converted to characters from factors.
+  
+```{r}
+testing.tidy <- testing[, -c(NA.col, nzv, 1:7)]
+
+rf.fit <- train(classe ~ ., data=training.tidy, method="rf", trControl=trainControl(method="cv", number=3))
+
+pred.testing <- as.character(predict(rf.fit, testing.tidy))
+```
+
+## Output answer
+
+Use the sample code provided in the project to output txt files with predictions for testing data set. Each file with only contain one letter answer (the class column) to the problem_id.
+  
+```{r}
+# create function to write predictions to files
+pml_write_files <- function(x) {
+  n <- length(x)
+  for(i in 1:n) {
+    filename <- paste0("problem_id_", i, ".txt")
+    write.table(x[i], file=filename, quote=F, row.names=F, col.names=F)
+  }
+}
+
+# create prediction files to submit
+#pml_write_files(pred.testing)
+```
