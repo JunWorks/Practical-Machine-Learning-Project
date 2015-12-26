@@ -83,5 +83,5 @@ pml_write_files <- function(x) {
 }
 
 # create prediction files to submit
-#pml_write_files(pred.testing)
+pml_write_files(pred.testing)
 ```
