@@ -18,14 +18,14 @@ First, load the library and training, testing data. Treat 'NA' and '#DIV/0!' as 
 library(caret)
 library(randomForest)
 
-training = read.csv("data/pml-training.csv", header = TRUE, na.strings = c("NA", "#DIV/0!"), stringsAsFactors = F)
-testing = read.csv("data/pml-testing.csv", header = TRUE, na.strings = c("NA", "#DIV/0!"), stringsAsFactors = F)
+training <- read.csv("data/pml-training.csv", header = TRUE, na.strings = c("NA", "#DIV/0!"), stringsAsFactors = F)
+testing <- read.csv("data/pml-testing.csv", header = TRUE, na.strings = c("NA", "#DIV/0!"), stringsAsFactors = F)
 ```
 
 Remove not useful columns: find the columns with too many NAs, columns with near zero variance and the first 7 columns that don't provide useful accelerometer signals. Make the new data set training.tidy.
   
 ```{r}
-NA.col = which(colMeans(is.na(training)) > 0.95)
+NA.col <- which(colMeans(is.na(training)) > 0.95)
 nzv <- nearZeroVar(training)
 
 training.tidy <- training[, -c(NA.col, nzv, 1:7)]

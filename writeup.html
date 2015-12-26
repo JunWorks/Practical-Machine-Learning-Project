@@ -76,10 +76,10 @@ img {
 <pre class="r"><code>library(caret)
 library(randomForest)
 
-training = read.csv(&quot;data/pml-training.csv&quot;, header = TRUE, na.strings = c(&quot;NA&quot;, &quot;#DIV/0!&quot;), stringsAsFactors = F)
-testing = read.csv(&quot;data/pml-testing.csv&quot;, header = TRUE, na.strings = c(&quot;NA&quot;, &quot;#DIV/0!&quot;), stringsAsFactors = F)</code></pre>
+training &lt;- read.csv(&quot;data/pml-training.csv&quot;, header = TRUE, na.strings = c(&quot;NA&quot;, &quot;#DIV/0!&quot;), stringsAsFactors = F)
+testing &lt;- read.csv(&quot;data/pml-testing.csv&quot;, header = TRUE, na.strings = c(&quot;NA&quot;, &quot;#DIV/0!&quot;), stringsAsFactors = F)</code></pre>
 <p>Remove not useful columns: find the columns with too many NAs, columns with near zero variance and the first 7 columns that don’t provide useful accelerometer signals. Make the new data set training.tidy.</p>
-<pre class="r"><code>NA.col = which(colMeans(is.na(training)) &gt; 0.95)
+<pre class="r"><code>NA.col &lt;- which(colMeans(is.na(training)) &gt; 0.95)
 nzv &lt;- nearZeroVar(training)
 
 training.tidy &lt;- training[, -c(NA.col, nzv, 1:7)]</code></pre>
