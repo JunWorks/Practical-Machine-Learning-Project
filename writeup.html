@@ -75,6 +75,7 @@ img {
 <p>First, load the library and training, testing data. Treat ‘NA’ and ‘#DIV/0!’ as NA variables.</p>
 <pre class="r"><code>library(caret)
 library(randomForest)
+library(doParallel) # for parallel computing
 
 training &lt;- read.csv(&quot;data/pml-training.csv&quot;, header = TRUE, na.strings = c(&quot;NA&quot;, &quot;#DIV/0!&quot;), stringsAsFactors = F)
 testing &lt;- read.csv(&quot;data/pml-testing.csv&quot;, header = TRUE, na.strings = c(&quot;NA&quot;, &quot;#DIV/0!&quot;), stringsAsFactors = F)</code></pre>
@@ -93,8 +94,15 @@ training.tidy.2 &lt;- training.tidy[-inTrain, ]</code></pre>
 </div>
 <div id="modeling" class="section level2">
 <h2>Modeling</h2>
-<p>Use the method of random forest to construct the model. In train fuction, use 3-fold cross-validation in trainControl. And then use the model to predict the classes in training.tidy.2. After that, we can check the estimated out of sample error.</p>
-<pre class="r"><code>rf.fit.1 &lt;- train(classe ~ ., data=training.tidy.1, method=&quot;rf&quot;, trControl=trainControl(method=&quot;cv&quot;, number=3))
+<p>Use the method of random forest to construct the model. Use all cores to do the computation and estimate total time. (In this case, I am using a laptop with 2 cores, 4 threads)</p>
+<p>In train fuction, use 3-fold cross-validation in trainControl. And then use the model to predict the classes in training.tidy.2. After that, we can check the estimated out of sample error.</p>
+<pre class="r"><code>s &lt;- Sys.time()
+
+# parallel computing set up
+cl &lt;- makeCluster(detectCores())
+registerDoParallel(cl)
+
+rf.fit.1 &lt;- train(classe ~ ., data=training.tidy.1, method=&quot;rf&quot;, trControl=trainControl(method=&quot;cv&quot;, number=3))
 rf.fit.1$finalModel</code></pre>
 <pre><code>## 
 ## Call:
@@ -111,6 +119,11 @@ rf.fit.1$finalModel</code></pre>
 ## C    0    8 2374   14    0 0.009181970
 ## D    0    3   26 2221    2 0.013765542
 ## E    0    0    5    7 2513 0.004752475</code></pre>
+<pre class="r"><code>stopCluster(cl)
+
+# estimate computing time
+Sys.time() - s</code></pre>
+<pre><code>## Time difference of 4.676268 mins</code></pre>
 <pre class="r"><code>pred2 &lt;- predict(rf.fit.1, training.tidy.2)
 confusionMatrix(training.tidy.2$classe, pred2)</code></pre>
 <pre><code>## Confusion Matrix and Statistics
@@ -144,16 +157,26 @@ confusionMatrix(training.tidy.2$classe, pred2)</code></pre>
 ## Detection Rate         0.2845   0.1925   0.1726   0.1621   0.1825
 ## Detection Prevalence   0.2845   0.1935   0.1743   0.1638   0.1839
 ## Balanced Accuracy      0.9988   0.9963   0.9922   0.9943   0.9992</code></pre>
-<p>The accuracy is about 99.42% on the second training set, so the out of sample error is about 0.58%.</p>
+<p>The accuracy is about 99.42% on the second training set, so the out of sample error is about 0.58%. Total time is about 5 min on my laptop.</p>
 </div>
 <div id="prediction-on-testing-data-set" class="section level2">
 <h2>Prediction on testing data set</h2>
 <p>The testing data set is processed the exact way I have done to the training set. The model is re-trained using the whole training data (Note the previous model I used for error estimation is only trained using 70% of the training data). The prediction on testing.tidy is then converted to characters from factors.</p>
 <pre class="r"><code>testing.tidy &lt;- testing[, -c(NA.col, nzv, 1:7)]
 
+s &lt;- Sys.time()
+
+cl &lt;- makeCluster(detectCores())
+registerDoParallel(cl)
+
 rf.fit &lt;- train(classe ~ ., data=training.tidy, method=&quot;rf&quot;, trControl=trainControl(method=&quot;cv&quot;, number=3))
 
-pred.testing &lt;- as.character(predict(rf.fit, testing.tidy))</code></pre>
+stopCluster(cl)
+
+Sys.time() - s</code></pre>
+<pre><code>## Time difference of 7.001631 mins</code></pre>
+<pre class="r"><code>pred.testing &lt;- as.character(predict(rf.fit, testing.tidy))</code></pre>
+<p>Computation time is a little longer than previously as I am using the whole training set.</p>
 </div>
 <div id="output-answer" class="section level2">
 <h2>Output answer</h2>
@@ -168,7 +191,7 @@ pml_write_files &lt;- function(x) {
 }
 
 # create prediction files to submit
-#pml_write_files(pred.testing)</code></pre>
+pml_write_files(pred.testing)</code></pre>
 </div>
 
 

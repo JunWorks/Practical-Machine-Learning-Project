@@ -17,6 +17,7 @@ First, load the library and training, testing data. Treat 'NA' and '#DIV/0!' as 
 ```{r, message=FALSE}
 library(caret)
 library(randomForest)
+library(doParallel) # for parallel computing
 
 training <- read.csv("data/pml-training.csv", header = TRUE, na.strings = c("NA", "#DIV/0!"), stringsAsFactors = F)
 testing <- read.csv("data/pml-testing.csv", header = TRUE, na.strings = c("NA", "#DIV/0!"), stringsAsFactors = F)
@@ -44,17 +45,30 @@ training.tidy.2 <- training.tidy[-inTrain, ]
 
 ## Modeling
 
-Use the method of random forest to construct the model. In train fuction, use 3-fold cross-validation in trainControl. And then use the model to predict the classes in training.tidy.2. After that, we can check the estimated out of sample error.
+Use the method of random forest to construct the model. Use all cores to do the computation and estimate total time. (In this case, I am using a laptop with 2 cores, 4 threads) 
+
+In train fuction, use 3-fold cross-validation in trainControl. And then use the model to predict the classes in training.tidy.2. After that, we can check the estimated out of sample error.
 
 ```{r}
+s <- Sys.time()
+
+# parallel computing set up
+cl <- makeCluster(detectCores())
+registerDoParallel(cl)
+
 rf.fit.1 <- train(classe ~ ., data=training.tidy.1, method="rf", trControl=trainControl(method="cv", number=3))
 rf.fit.1$finalModel
+
+stopCluster(cl)
+
+# estimate computing time
+Sys.time() - s
 
 pred2 <- predict(rf.fit.1, training.tidy.2)
 confusionMatrix(training.tidy.2$classe, pred2)
 ```
 
-The accuracy is about 99.42% on the second training set, so the out of sample error is about 0.58%.
+The accuracy is about 99.42% on the second training set, so the out of sample error is about 0.58%. Total time is about 5 min on my laptop.
 
 ## Prediction on testing data set
 
@@ -63,10 +77,21 @@ The testing data set is processed the exact way I have done to the training set.
 ```{r}
 testing.tidy <- testing[, -c(NA.col, nzv, 1:7)]
 
+s <- Sys.time()
+
+cl <- makeCluster(detectCores())
+registerDoParallel(cl)
+
 rf.fit <- train(classe ~ ., data=training.tidy, method="rf", trControl=trainControl(method="cv", number=3))
+
+stopCluster(cl)
+
+Sys.time() - s
 
 pred.testing <- as.character(predict(rf.fit, testing.tidy))
 ```
+
+Computation time is a little longer than previously as I am using the whole training set.
 
 ## Output answer
 
